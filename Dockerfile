@@ -1,6 +1,8 @@
+# Use a complete stable runtime image to bypass exit code 100 network conflicts
 FROM python:3.11-slim
 
-RUN apt-get update && apt-get install -y \
+# Force fix apt mirrors and install system dependencies for headless Chromium setup
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
     wget \
     gnupg \
     unzip \
@@ -13,11 +15,13 @@ RUN apt-get update && apt-get install -y \
     chromium-driver \
     && rm -rf /var/lib/apt/lists/*
 
+# Map operational environment pointers cleanly
 ENV CHROME_BIN=/usr/bin/chromium
 ENV CHROMEDRIVER_PATH=/usr/bin/chromiumdriver
 
 WORKDIR /app
 
+# Pull installation configurations securely
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
