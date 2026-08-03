@@ -1,21 +1,13 @@
-# Use a complete stable runtime image to bypass exit code 100 network conflicts
-FROM python:3.11-slim
+# Use an official, fully configured Selenium image that already has Chrome installed
+FROM seleniarm/standalone-chromium:latest
 
-# Force fix apt mirrors and install system dependencies for headless Chromium setup
-RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    wget \
-    gnupg \
-    unzip \
-    curl \
-    libglib2.0-0 \
-    libnss3 \
-    libgconf-2-4 \
-    libfontconfig1 \
-    chromium \
-    chromium-driver \
-    && rm -rf /var/lib/apt/lists/*
+# Switch to root to configure Python paths smoothly
+USER root
 
-# Map operational environment pointers cleanly
+# Install Python 3 and pip securely without relying on breaking OS bundles
+RUN apt-get update && apt-get install -y python3 python3-pip --no-install-recommends && rm -rf /var/lib/apt/lists/*
+
+# Map operational environment pointers to the pre-installed Chromium paths
 ENV CHROME_BIN=/usr/bin/chromium
 ENV CHROMEDRIVER_PATH=/usr/bin/chromiumdriver
 
@@ -23,7 +15,7 @@ WORKDIR /app
 
 # Pull installation configurations securely
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 
 COPY . .
 
