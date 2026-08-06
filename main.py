@@ -2,7 +2,7 @@ import os
 import hmac
 import hashlib
 import logging
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Depends
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client, Client
@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="JobApply AI Production Engine")
 
-# Configure broad CORS origins to allow clean communication from your frontend and Chrome Extension
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,10 +20,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Core infrastructure variables pulled securely from Render Environment Settings
 SUPABASE_URL = "https://supabase.co"
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "sb_publishable_key_sb_GMd45FNc_tSp14xZjjbA_Ib0RY1CF")
-RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "your_secret_webhook_string")
+RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "JobBotSecureWebhookToken2026")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -37,7 +35,6 @@ class JobScanRequest(BaseModel):
 
 def process_ai_job_matching(data: JobScanRequest):
     logger.info(f"Initiating OpenAI evaluation tracking arrays for premium profile: {data.email}")
-    # Real processing logic runs here securely in the cloud
 
 # 🛡️ THE MONETIZATION GATEWAY: Razorpay hits this URL directly server-to-server
 @app.post("/razorpay-webhook")
@@ -48,12 +45,11 @@ async def razorpay_webhook_listener(request: Request):
     if not signature:
         raise HTTPException(status_code=400, detail="Missing secure transaction signature.")
         
-    # Verify that the notification actually came from Razorpay and wasn't faked by a hacker
     expected_signature = hmac.new(
         RAZORPAY_WEBHOOK_SECRET.encode(),
         raw_body,
         hashlib.sha256
-    .hexdigest()
+    ).hexdigest()
     
     if not hmac.compare_digest(signature, expected_signature):
         raise HTTPException(status_code=400, detail="Invalid cryptographic payload signature matching.")
@@ -61,14 +57,12 @@ async def razorpay_webhook_listener(request: Request):
     payload = await request.json()
     event = payload.get("event")
     
-    # Listen for a successful payment link or payment button capture event
     if event in ["payment.captured", "order.paid", "payment_link.paid"]:
         payment_entity = payload["payload"]["payment"]["entity"]
         customer_email = payment_entity.get("email")
         
         if customer_email:
             logger.info(f"Payment verified for {customer_email}. Activating account infrastructure.")
-            # Lock the premium state into your persistent database warehouse table permanently
             supabase.table("user_configs").upsert({
                 "email": customer_email,
                 "is_premium": True,
@@ -80,7 +74,6 @@ async def razorpay_webhook_listener(request: Request):
 # 🚀 THE SECURE AUTOMATION ROUTE: Chrome Extension hits this to scan a job listing
 @app.post("/start-automation")
 async def start_automation_engine(data: JobScanRequest, background_tasks: BackgroundTasks):
-    # CRITICAL CHECK: Verify database state before spending any OpenAI completion token budget
     user_check = supabase.table("user_configs").select("is_premium").eq("email", data.email).maybe_single().execute()
     
     if not user_check.data or not user_check.data.get("is_premium"):
